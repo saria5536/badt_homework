@@ -1,0 +1,148 @@
+## Code here is to create a metafile for greeness and then running models ##
+## load necessary libraries##
+library(readxl)
+library(stringr)
+library(ggplot2)
+library(brms)
+library(cmdstanr)
+library(tidyverse)
+library(tidybayes)
+
+############ Part 1: Data Manipulation #########################################
+## Create a function to make sure data is in right format 
+clean_daily_file <- function(file_path) {
+  df <- readxl::read_excel(file_path)
+  file_name <- basename(file_path)
+  year <- stringr::str_extract(file_name, "20\\d{2}") ## extract from file name
+  df_clean <- df %>%
+    mutate(
+      Plot = as.factor(stringr::str_extract(MemCard, "\\d{4}$")), # extract from sd card name
+      Date = as.Date(Date),
+      meanTempC = as.numeric(meanTempC),
+      JulianDay = as.integer(format(Date, "%j")), # get from date
+      Year = as.factor(year),
+      SourceFile = file_name,
+      meanGreenFraction = meanGreenFraction / 100, ## convert original percent value to proportion out of 100
+      N_pixel = 10000, ## randomly estimated 
+      n_green = as.integer(round(meanGreenFraction * N_pixel)) ## convert to successful number of trials as integer 
+    )
+  return(df_clean)}
+files <- list.files(
+  path = ".",
+  pattern = "^dailyGreen_20\\d{2}_RypeLierne.*\\.xlsx$",
+  full.names = TRUE)
+
+combined_data <- bind_rows(lapply(files, clean_daily_file))
+View(combined_data)
+str(combined_data)
+head(combined_data)
+################################################################################
+
+##################  Part II: Greening model setup ##############################
+
+## Beta-binomial
+Model_1 <- brms::brm(n_green | trials(N_pixel) ~ Year + (1|Plot), 
+                     data = combined_data, 
+                     family = beta_binomial (link = "logit"), 
+                     chains = 3,
+                     backend = "cmdstanr", 
+                     iter = 2000, warmup = 500, 
+                     seed = 123)
+
+saveRDS(Model_1, "greening_M1.RDS") ## so u dont need to rerun again
+summary(Model_1) 
+#bulk and Tail TSS is sample effect size and must be higher than 1000 and Rhat should be 1 if converged well 
+fixef(Model_1) ## detailed value of estimates 
+coef(Model_1) ## group level effect
+plot(Model_1) ## should be a fuzzy caterpillar pattern for good convergence 
+pp_check(Model_1) ## check if model predicts your data accurately 
+
+## binomial 
+Model_2 <- brms::brm(n_green | trials(N_pixel) ~ Year + (1|Plot), 
+                             data = combined_data, 
+                             family = binomial (link = "logit"), 
+                             chains = 3,
+                             backend = "cmdstanr", 
+                             iter = 2000, warmup = 500, 
+                             seed = 123)
+
+## beta binomial with julian day 
+Model_3 <- brms::brm(n_green | trials(N_pixel) ~ Year + s(JulianDay, by = Year) + (1|Plot), 
+                     data = combined_data, 
+                     family = beta_binomial (link = "logit"), 
+                     chains = 3,
+                     backend = "cmdstanr", 
+                     iter = 2000, warmup = 500, 
+                     seed = 123)
+saveRDS(Model_3, "greening_M3.RDS") ## so u dont need to rerun again
+summary(Model_3) 
+#bulk and Tail TSS is sample effect size and must be higher than 1000 and Rhat should be 1 if converged well 
+fixef(Model_3) ## detailed value of estimates 
+coef(Model_3) ## group level effect
+plot(Model_3) ## should be a fuzzy caterpillar pattern for good convergence 
+pp_check(Model_3) ## check if model predicts your data accurately 
+
+
+#####################################################################################
+## compare the two models, assess fit of the model
+loo(Model_1, Model_2, compare = TRUE) ## higher elpd value of model is better
+## in model comparison, model with 0 is the best 
+######################################################################################
+## if you want to extract what default priors have been used 
+get_prior(
+  n_green | trials(N_pixel) ~ Year + (1 | Plot),
+  data = combined_data,
+  family = beta_binomial())
+#####################################################################################
+
+
+newdata <- expand.grid(
+  JulianDay = seq(min(combined_data$JulianDay),
+                  max(combined_data$JulianDay), by = 1),
+  Year = levels(combined_data$Year),
+  Plot = NA
+)
+newdata$N_pixel <- 10000
+pred <- fitted(Model_3, newdata = newdata, re_formula = NA)
+
+plot_data <- cbind(newdata, pred)
+library(ggplot2)
+
+plot_data_trim <- plot_data %>%
+  dplyr::filter(JulianDay <= 180)
+
+ggplot(plot_data_trim, aes(x = JulianDay, y = Estimate)) +
+  geom_line(color = "blue") +
+  geom_ribbon(aes(ymin = Q2.5, ymax = Q97.5), alpha = 0.2) +
+  facet_wrap(~Year) +
+  theme_minimal()
+
+
+library(dplyr)
+
+greenup <- plot_data %>%
+  group_by(Year) %>%
+  mutate(
+    max_green = max(Estimate),
+    threshold = 200
+  ) %>%
+  filter(Estimate >= threshold) %>%
+  summarise(
+    greenup_day = min(JulianDay)
+  )
+
+############################################
+plot_data_trim <- plot_data %>%
+  dplyr::filter(JulianDay <= 200)
+
+plot_data_slope <- plot_data_trim %>%
+  dplyr::group_by(Year) %>%
+  dplyr::arrange(JulianDay) %>%
+  dplyr::mutate(
+    slope = c(NA, diff(Estimate))
+  )
+
+peak_growth <- plot_data_slope %>%
+  dplyr::group_by(Year) %>%
+  dplyr::filter(slope == max(slope, na.rm = TRUE)) %>%
+  dplyr::select(Year, JulianDay, slope)

@@ -275,7 +275,7 @@ spring_draws_df %>%
   theme_minimal()
 ```
 
-# Results 
+# Results
 
 Compared to the model with uniformative default priors, the model with weakly informative priors I set performed much better. Firstly the spline coefficient (sds smoothness) greatly improved. For example in year 2019, sds (sJulianDayYear2019_1) was 4.64 (2.08- 9.99). But with the prior, exponential (1) on sds, the sds (sJulianDayYear2019_1) was lowered to 3.7 (2.14- 6.12). The stronger prior helped to smoothen the curve and make it more realistic. Yet, the regression coefficient, random effect and dispersion (phi) values remained almost all identical despite setting stronger priors on these parameters as well. The ESS values also increased meaning the sampling quality got better with the priors I set. In conclusion, this model with the weakly informative prior improved the smoother and provided more stable estimates of seasonal greenness patterns in each year.
 
