@@ -3,7 +3,7 @@
     "path": "/cloud/project/BADT_Homework/BADT_Homework.qmd",
     "project_path": "BADT_Homework/BADT_Homework.qmd",
     "type": "quarto_markdown",
-    "hash": "0",
+    "hash": "1131330105",
     "contents": "",
     "dirty": false,
     "created": 1777445328034.0,
@@ -14,16 +14,19 @@
         "rmdVisualWrapConfigured": "true",
         "source_window_id": "",
         "Source": "Source",
-        "docOutlineVisible": "1",
+        "docOutlineVisible": "0",
         "rmdVisualCollapsedChunks": "",
-        "rmdVisualModeLocation": "55:0"
+        "rmdVisualModeLocation": "5217:5036.6669921875",
+        "cursorPosition": "135,0",
+        "scrollLine": "0",
+        "docOutlineSize": "135"
     },
     "folds": "",
-    "lastKnownWriteTime": 1777384601,
+    "lastKnownWriteTime": 1777648281,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1777384601,
+    "last_content_update": 1777648281735,
     "read_only": false,
     "read_only_alternatives": []
 }

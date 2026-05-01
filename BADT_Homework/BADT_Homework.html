@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>Homework</title>
+<title>BADT Assignment Saria Sato</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -82,7 +82,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Homework</h1>
+<h1 class="title">BADT Assignment Saria Sato</h1>
 </div>
 
 
@@ -99,15 +99,33 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<section id="project-description" class="level2">
-<h2 class="anchored" data-anchor-id="project-description">Project Description</h2>
-<p>This project is one of the building blocks for a bigger project of my PhD work that looks into the effects of spring timing on the breeding success of alpine birds in central Norway. The study has data from 2019 to 2025 where we have field survey data showing some years of good breeding success and some years of failure.</p>
-<p>In order to effectively quantify the timing of spring first, I use camera data from the field sites (the cameras are set up across 7 different plots within the study site). We use</p>
-<p>Year as a fixed effect because the purpose is to see the difference each year. This is at the central of my question later part of my project looks into how t</p>
+<section id="project-background" class="level2">
+<h2 class="anchored" data-anchor-id="project-background">Project Background</h2>
+<p>This project is one of the building blocks for a bigger project of my PhD work that looks into the effects of spring timing on the breeding success of an alpine bird, willow ptarmigan (<em>Lagopus lagopus</em>) in central Norway. As there is yearly variation in the number of chicks produced, we are interested in understanding if the yearly differences in greening /timing of spring affects this biological process. We have camera data from 2019 to 2025 where greenness is quantified by the number of green pixels in the picture. The camera image spans from mid-March to late-June (winter to spring transition) and are set up across 7 different plots within our study area.</p>
+<p>For the purpose of BADT project, I focus on estimating the timing of greenness for each year. For each year, I am interested in first, estimating the mean greenness and then seeing the seasonal change in greenness for each of these years. I test three models to find which model best reflects the ecological process of greening and statistically explain my seasonal pattern well. I run a non-linear model by using a spline function and then use binomial distribution where n_green is the number of green pixels and N_pixel is trials, which is the total number of pixels.</p>
+<p>NB: I did not use Year as random effect for two reasons</p>
+<ol type="1">
+<li>I would like to have year to year comparison and know which year was greener</li>
+<li>I only have 7 years, which is a bit low to properly estimate stable variance</li>
+</ol>
+<p><u><strong>MODELS</strong></u></p>
+<ul>
+<li><p><strong>Model binomial:</strong> n_green | trials(N_pixel) ~ Year + s(JulianDay, by = Year) + (1|Plot),</p>
+<p>family = binomial (link = “logit”)</p></li>
+<li><p><strong>Model beta binomial with default priors:</strong> n_green | trials(N_pixel) ~ Year + s(JulianDay, by = Year) + (1|Plot)</p>
+<p>family = beta_binomial (link = “logit”)</p></li>
+<li><p><strong>Model beta-binomial with weakly informative prior:</strong> n_green | trials(N_pixel) ~ Year + s(JulianDay, by = Year) + (1|Plot)</p>
+<p>family = binomial (link = “logit”) with the priors:</p>
+<p>prior(normal(0, 1), class = “b”)</p>
+<p>prior(normal(0, 2), class = “Intercept”)</p>
+<p>prior(exponential(1), class = “sd”)</p>
+<p>prior(exponential(1), class = “sds”)<br>
+prior(gamma(2, 0.1), class = “phi”)</p></li>
+</ul>
 </section>
 <section id="analysis" class="level2">
 <h2 class="anchored" data-anchor-id="analysis">Analysis</h2>
-<p>Step 1: Data Manipulation</p>
+<p><strong>Step 1: Data Manipulation</strong></p>
 <div class="cell">
 <div class="cell-output cell-output-stderr">
 <pre><code>Loading required package: Rcpp</code></pre>
@@ -172,14 +190,478 @@ The following objects are masked from 'package:brms':
 #   SourceFile &lt;chr&gt;, N_pixel &lt;dbl&gt;, n_green &lt;int&gt;</code></pre>
 </div>
 </div>
-<p>You can add options to executable code like this</p>
+<p><strong>Step 2: Running Models</strong></p>
+<p><strong>Model Binomial</strong></p>
+<p><u><em>Run the model</em></u></p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="dv">2</span> <span class="sc">*</span> <span class="dv">2</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required namespace: rstan</code></pre>
+</div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 4</code></pre>
+<pre><code> Family: beta_binomial 
+  Links: mu = logit 
+Formula: n_green | trials(N_pixel) ~ Year + (1 | Plot) 
+   Data: combined_data (Number of observations: 4648) 
+  Draws: 3 chains, each with iter = 2000; warmup = 500; thin = 1;
+         total post-warmup draws = 4500
+
+Multilevel Hyperparameters:
+~Plot (Number of levels: 7) 
+              Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+sd(Intercept)     0.20      0.08     0.11     0.40 1.00     1149     2016
+
+Regression Coefficients:
+          Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+Intercept    -2.60      0.09    -2.78    -2.41 1.00     1483     1889
+Year2020     -0.21      0.06    -0.32    -0.10 1.00     2363     2693
+Year2021     -0.05      0.05    -0.15     0.06 1.00     2211     2606
+Year2022     -0.20      0.06    -0.30    -0.08 1.00     2335     3057
+Year2023     -0.02      0.06    -0.14     0.09 1.00     2180     2202
+Year2024      0.22      0.06     0.11     0.33 1.00     1999     2962
+Year2025      0.27      0.06     0.16     0.39 1.00     2258     2889
+
+Further Distributional Parameters:
+    Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+phi     5.03      0.13     4.77     5.29 1.00     3601     2853
+
+Draws were sampled using sample(hmc). For each parameter, Bulk_ESS
+and Tail_ESS are effective sample size measures, and Rhat is the potential
+scale reduction factor on split chains (at convergence, Rhat = 1).</code></pre>
 </div>
 </div>
-<p>The <code>echo: false</code> option disables the printing of code (only output is displayed).</p>
+<p><em>Results and Interpretation</em></p>
+<p>Clearly, the binomial model failed to converge with R-hat value &gt; 1. The model took 13 hours to run. Silly mistake but the lesson learned here is to check for overdispersion first and then to run the model. I switched to beta-binomial below and the model results improved. __________________________________________________________________________________________</p>
+<p><strong>Model Beta-Binomial with default priors</strong></p>
+<p><u><em>Run the model</em></u></p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>Model_betabinomial <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"/cloud/project/Greeness/greening_M3.RDS"</span>)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(Model_betabinomial) </span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: There were 7 divergent transitions after warmup. Increasing
+adapt_delta above 0.8 may help. See
+http://mc-stan.org/misc/warnings.html#divergent-transitions-after-warmup</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code> Family: beta_binomial 
+  Links: mu = logit 
+Formula: n_green | trials(N_pixel) ~ Year + s(JulianDay, by = Year) + (1 | Plot) 
+   Data: combined_data (Number of observations: 4648) 
+  Draws: 3 chains, each with iter = 2000; warmup = 500; thin = 1;
+         total post-warmup draws = 4500
+
+Smoothing Spline Hyperparameters:
+                          Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS
+sds(sJulianDayYear2019_1)     4.64      2.20     2.08     9.99 1.00     1911
+sds(sJulianDayYear2020_1)     6.65      1.84     4.07    11.06 1.00     1975
+sds(sJulianDayYear2021_1)     5.13      1.52     3.01     8.75 1.00     1889
+sds(sJulianDayYear2022_1)     4.25      1.39     2.24     7.45 1.00     2199
+sds(sJulianDayYear2023_1)     2.89      1.15     1.41     5.79 1.00     2633
+sds(sJulianDayYear2024_1)     7.84      2.40     4.37    13.75 1.00     2337
+sds(sJulianDayYear2025_1)     2.41      1.02     1.07     4.82 1.00     2706
+                          Tail_ESS
+sds(sJulianDayYear2019_1)     2132
+sds(sJulianDayYear2020_1)     2963
+sds(sJulianDayYear2021_1)     3024
+sds(sJulianDayYear2022_1)     2751
+sds(sJulianDayYear2023_1)     3031
+sds(sJulianDayYear2024_1)     2628
+sds(sJulianDayYear2025_1)     2645
+
+Multilevel Hyperparameters:
+~Plot (Number of levels: 7) 
+              Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+sd(Intercept)     0.57      0.22     0.30     1.14 1.00     1941     2812
+
+Regression Coefficients:
+                      Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS
+Intercept                -3.21      0.23    -3.66    -2.73 1.00     1495
+Year2020                 -0.74      0.07    -0.87    -0.60 1.00     2101
+Year2021                 -0.15      0.06    -0.27    -0.03 1.00     1935
+Year2022                 -0.48      0.06    -0.59    -0.35 1.00     1840
+Year2023                 -0.21      0.06    -0.32    -0.08 1.00     1997
+Year2024                  0.33      0.07     0.20     0.46 1.00     1897
+Year2025                  0.43      0.06     0.32     0.56 1.00     1780
+sJulianDay:Year2019_1     7.61     11.18   -18.53    27.39 1.00     2425
+sJulianDay:Year2020_1    -4.76      9.66   -23.05    14.71 1.00     1866
+sJulianDay:Year2021_1     0.22      8.17   -16.16    16.69 1.00     2200
+sJulianDay:Year2022_1     4.93      8.22   -11.57    21.47 1.00     2245
+sJulianDay:Year2023_1     7.95      6.32    -4.96    20.62 1.00     2719
+sJulianDay:Year2024_1     7.80     16.32   -23.62    41.00 1.00     1809
+sJulianDay:Year2025_1     5.11      5.60    -6.60    16.33 1.00     3056
+                      Tail_ESS
+Intercept                 2276
+Year2020                  2416
+Year2021                  1969
+Year2022                  2347
+Year2023                  2126
+Year2024                  2097
+Year2025                  2002
+sJulianDay:Year2019_1     2076
+sJulianDay:Year2020_1     2050
+sJulianDay:Year2021_1     2268
+sJulianDay:Year2022_1     2354
+sJulianDay:Year2023_1     2755
+sJulianDay:Year2024_1     2375
+sJulianDay:Year2025_1     2956
+
+Further Distributional Parameters:
+    Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+phi    24.90      0.67    23.58    26.21 1.00     8053     3113
+
+Draws were sampled using sample(hmc). For each parameter, Bulk_ESS
+and Tail_ESS are effective sample size measures, and Rhat is the potential
+scale reduction factor on split chains (at convergence, Rhat = 1).</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(Model_betabinomial)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="BADT_Homework_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="BADT_Homework_files/figure-html/unnamed-chunk-6-2.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="BADT_Homework_files/figure-html/unnamed-chunk-6-3.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="BADT_Homework_files/figure-html/unnamed-chunk-6-4.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="BADT_Homework_files/figure-html/unnamed-chunk-6-5.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">pp_check</span>(Model_betabinomial)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Using 10 posterior draws for ppc type 'dens_overlay' by default.</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="BADT_Homework_files/figure-html/unnamed-chunk-6-6.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p><u><em>Priors:</em></u> here I used the default priors that is plausible for each parameter</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">get_prior</span>(</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  n_green <span class="sc">|</span> <span class="fu">trials</span>(N_pixel) <span class="sc">~</span> Year <span class="sc">+</span> <span class="fu">s</span>(JulianDay, <span class="at">by =</span>Year) <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> Plot),</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> combined_data,</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">family =</span> <span class="fu">beta_binomial</span>())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                prior     class                    coef group resp dpar nlpar
+               (flat)         b                                              
+               (flat)         b   sJulianDay:Year2019_1                      
+               (flat)         b   sJulianDay:Year2020_1                      
+               (flat)         b   sJulianDay:Year2021_1                      
+               (flat)         b   sJulianDay:Year2022_1                      
+               (flat)         b   sJulianDay:Year2023_1                      
+               (flat)         b   sJulianDay:Year2024_1                      
+               (flat)         b   sJulianDay:Year2025_1                      
+               (flat)         b                Year2020                      
+               (flat)         b                Year2021                      
+               (flat)         b                Year2022                      
+               (flat)         b                Year2023                      
+               (flat)         b                Year2024                      
+               (flat)         b                Year2025                      
+ student_t(3, 0, 2.5) Intercept                                              
+    gamma(0.01, 0.01)       phi                                              
+ student_t(3, 0, 2.5)        sd                                              
+ student_t(3, 0, 2.5)        sd                          Plot                
+ student_t(3, 0, 2.5)        sd               Intercept  Plot                
+ student_t(3, 0, 2.5)       sds                                              
+ student_t(3, 0, 2.5)       sds s(JulianDay, by = Year)                      
+ lb ub tag       source
+                default
+           (vectorized)
+           (vectorized)
+           (vectorized)
+           (vectorized)
+           (vectorized)
+           (vectorized)
+           (vectorized)
+           (vectorized)
+           (vectorized)
+           (vectorized)
+           (vectorized)
+           (vectorized)
+           (vectorized)
+                default
+  0             default
+  0             default
+  0        (vectorized)
+  0        (vectorized)
+  0             default
+  0        (vectorized)</code></pre>
+</div>
+</div>
+<p><u><em>Interpret the beta-binomial model results</em></u></p>
+<p>Model Validation and Fit: This is much better result compared to the first model with just binomial distribution. The Rhat value is 1 for each effect which indicates that the model converged well. The Bulk ESS and Tail ESS, which is our effective sample size are above 1000. The phi-value of 24.81 suggests that there is substantial overdispersion, which justifies our reason to use the beta-binomial distribution.</p>
+<p>However, there are minor divergence issues in the model and more importantly the 95% CI and the standard error for the spline coefficient are also quite large. So I decided to put a weakly informative priors to set some biologically plausible values in hopes to improve the model performance. The model is presented below:</p>
+<p>_________________________________________________________________________________________</p>
+<p><strong>Model Beta-Binomial with weakly informative priors</strong></p>
+<p><em>Run the model</em></p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>Model_3 <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"/cloud/project/BADT_Homework/Model_betabinomial_prior.rds"</span>)</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(Model_3)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> Family: beta_binomial 
+  Links: mu = logit 
+Formula: n_green | trials(N_pixel) ~ Year + s(JulianDay, by = Year) + (1 | Plot) 
+   Data: combined_data (Number of observations: 4648) 
+  Draws: 3 chains, each with iter = 2000; warmup = 500; thin = 1;
+         total post-warmup draws = 4500
+
+Smoothing Spline Hyperparameters:
+                          Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS
+sds(sJulianDayYear2019_1)     3.70      1.02     2.14     6.12 1.00     2734
+sds(sJulianDayYear2020_1)     5.43      1.13     3.63     8.06 1.00     3142
+sds(sJulianDayYear2021_1)     4.04      0.98     2.52     6.30 1.00     2514
+sds(sJulianDayYear2022_1)     3.49      0.92     2.10     5.61 1.00     2642
+sds(sJulianDayYear2023_1)     2.58      0.78     1.46     4.49 1.00     3169
+sds(sJulianDayYear2024_1)     5.65      1.28     3.68     8.67 1.00     2729
+sds(sJulianDayYear2025_1)     2.12      0.66     1.17     3.73 1.00     3705
+                          Tail_ESS
+sds(sJulianDayYear2019_1)     3485
+sds(sJulianDayYear2020_1)     3199
+sds(sJulianDayYear2021_1)     2907
+sds(sJulianDayYear2022_1)     2990
+sds(sJulianDayYear2023_1)     3377
+sds(sJulianDayYear2024_1)     2510
+sds(sJulianDayYear2025_1)     3422
+
+Multilevel Hyperparameters:
+~Plot (Number of levels: 7) 
+              Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+sd(Intercept)     0.53      0.19     0.29     1.00 1.00     1990     2831
+
+Regression Coefficients:
+                      Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS
+Intercept                -3.20      0.21    -3.60    -2.77 1.00     1496
+Year2020                 -0.75      0.06    -0.87    -0.63 1.00     2392
+Year2021                 -0.16      0.06    -0.26    -0.05 1.00     2589
+Year2022                 -0.48      0.06    -0.59    -0.37 1.00     2679
+Year2023                 -0.20      0.06    -0.32    -0.09 1.00     2656
+Year2024                  0.32      0.06     0.21     0.44 1.00     2452
+Year2025                  0.43      0.06     0.32     0.54 1.00     2498
+sJulianDay:Year2019_1     0.16      1.00    -1.79     2.04 1.00    10776
+sJulianDay:Year2020_1    -0.12      1.03    -2.10     1.88 1.00     8430
+sJulianDay:Year2021_1     0.03      0.97    -1.87     1.92 1.00     9812
+sJulianDay:Year2022_1     0.14      0.99    -1.75     2.08 1.00    10446
+sJulianDay:Year2023_1     0.31      0.99    -1.67     2.20 1.00    11275
+sJulianDay:Year2024_1     0.04      0.97    -1.87     1.94 1.00    11617
+sJulianDay:Year2025_1     0.29      0.99    -1.61     2.14 1.00    10042
+                      Tail_ESS
+Intercept                 2179
+Year2020                  3426
+Year2021                  3286
+Year2022                  3331
+Year2023                  3526
+Year2024                  3007
+Year2025                  2983
+sJulianDay:Year2019_1     3150
+sJulianDay:Year2020_1     3254
+sJulianDay:Year2021_1     3017
+sJulianDay:Year2022_1     3213
+sJulianDay:Year2023_1     3073
+sJulianDay:Year2024_1     3275
+sJulianDay:Year2025_1     3194
+
+Further Distributional Parameters:
+    Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+phi    24.81      0.66    23.52    26.17 1.00    11306     2994
+
+Draws were sampled using sample(hmc). For each parameter, Bulk_ESS
+and Tail_ESS are effective sample size measures, and Rhat is the potential
+scale reduction factor on split chains (at convergence, Rhat = 1).</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(Model_3)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="BADT_Homework_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="BADT_Homework_files/figure-html/unnamed-chunk-9-2.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="BADT_Homework_files/figure-html/unnamed-chunk-9-3.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="BADT_Homework_files/figure-html/unnamed-chunk-9-4.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="BADT_Homework_files/figure-html/unnamed-chunk-9-5.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="fu">pp_check</span> (Model_3)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Using 10 posterior draws for ppc type 'dens_overlay' by default.</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="BADT_Homework_files/figure-html/unnamed-chunk-9-6.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p><em>Plot the seasonal trend of greening for each year</em></p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>newdata <span class="ot">&lt;-</span> <span class="fu">expand.grid</span>(</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">JulianDay =</span> <span class="fu">seq</span>(<span class="fu">min</span>(combined_data<span class="sc">$</span>JulianDay),</span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>                  <span class="fu">max</span>(combined_data<span class="sc">$</span>JulianDay), <span class="at">by =</span> <span class="dv">1</span>),</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">Year =</span> <span class="fu">levels</span>(combined_data<span class="sc">$</span>Year),</span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">Plot =</span> <span class="cn">NA</span></span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>newdata<span class="sc">$</span>N_pixel <span class="ot">&lt;-</span> <span class="dv">10000</span></span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a>pred <span class="ot">&lt;-</span> <span class="fu">fitted</span>(Model_3, <span class="at">newdata =</span> newdata, <span class="at">re_formula =</span> <span class="cn">NA</span>)</span>
+<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a>plot_data <span class="ot">&lt;-</span> <span class="fu">cbind</span>(newdata, pred)</span>
+<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a>plot_data_trim <span class="ot">&lt;-</span> plot_data <span class="sc">%&gt;%</span></span>
+<span id="cb26-12"><a href="#cb26-12" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">filter</span>(JulianDay <span class="sc">&lt;=</span> <span class="dv">180</span>)</span>
+<span id="cb26-13"><a href="#cb26-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-14"><a href="#cb26-14" aria-hidden="true" tabindex="-1"></a>p <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(plot_data_trim, <span class="fu">aes</span>(<span class="at">x =</span> JulianDay, <span class="at">y =</span> Estimate)) <span class="sc">+</span></span>
+<span id="cb26-15"><a href="#cb26-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">color =</span> <span class="st">"darkgreen"</span>) <span class="sc">+</span></span>
+<span id="cb26-16"><a href="#cb26-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_ribbon</span>(<span class="fu">aes</span>(<span class="at">ymin =</span> Q2<span class="fl">.5</span>, <span class="at">ymax =</span> Q97<span class="fl">.5</span>), <span class="at">alpha =</span> <span class="fl">0.2</span>) <span class="sc">+</span></span>
+<span id="cb26-17"><a href="#cb26-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span>Year) <span class="sc">+</span></span>
+<span id="cb26-18"><a href="#cb26-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span>
+<span id="cb26-19"><a href="#cb26-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-20"><a href="#cb26-20" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(p)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="BADT_Homework_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p><u><em>Extract posterior predictions to find the timing of spring</em></u></p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="do">##### Extract the posterior predictions ######</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>posterior <span class="ot">&lt;-</span> <span class="fu">posterior_epred</span>(</span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>  Model_3,</span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">newdata =</span> newdata,</span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">re_formula =</span> <span class="cn">NA</span></span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a><span class="do">### Convert to proportions and create a function to loop through the posterior draws ##</span></span>
+<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a>posterior_prop <span class="ot">&lt;-</span> posterior <span class="sc">/</span> newdata<span class="sc">$</span>N_pixel</span>
+<span id="cb27-10"><a href="#cb27-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-11"><a href="#cb27-11" aria-hidden="true" tabindex="-1"></a>spring_draws <span class="ot">&lt;-</span> <span class="fu">apply</span>(posterior_prop, <span class="dv">1</span>, <span class="cf">function</span>(draw_values) {</span>
+<span id="cb27-12"><a href="#cb27-12" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb27-13"><a href="#cb27-13" aria-hidden="true" tabindex="-1"></a>  df <span class="ot">&lt;-</span> newdata</span>
+<span id="cb27-14"><a href="#cb27-14" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>prop <span class="ot">&lt;-</span> draw_values</span>
+<span id="cb27-15"><a href="#cb27-15" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb27-16"><a href="#cb27-16" aria-hidden="true" tabindex="-1"></a>  df <span class="sc">%&gt;%</span></span>
+<span id="cb27-17"><a href="#cb27-17" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_by</span>(Year) <span class="sc">%&gt;%</span></span>
+<span id="cb27-18"><a href="#cb27-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">summarise</span>(</span>
+<span id="cb27-19"><a href="#cb27-19" aria-hidden="true" tabindex="-1"></a>      <span class="at">spring_day =</span> {</span>
+<span id="cb27-20"><a href="#cb27-20" aria-hidden="true" tabindex="-1"></a>        valid_days <span class="ot">&lt;-</span> JulianDay[prop <span class="sc">&gt;</span> <span class="fl">0.1</span> <span class="sc">&amp;</span> <span class="sc">!</span><span class="fu">is.na</span>(prop)]</span>
+<span id="cb27-21"><a href="#cb27-21" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="fu">length</span>(valid_days) <span class="sc">==</span> <span class="dv">0</span>) <span class="cn">NA</span> <span class="cf">else</span> <span class="fu">min</span>(valid_days)</span>
+<span id="cb27-22"><a href="#cb27-22" aria-hidden="true" tabindex="-1"></a>      },</span>
+<span id="cb27-23"><a href="#cb27-23" aria-hidden="true" tabindex="-1"></a>      <span class="at">.groups =</span> <span class="st">"drop"</span></span>
+<span id="cb27-24"><a href="#cb27-24" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span></span>
+<span id="cb27-25"><a href="#cb27-25" aria-hidden="true" tabindex="-1"></a>    <span class="fu">pull</span>(spring_day)</span>
+<span id="cb27-26"><a href="#cb27-26" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb27-27"><a href="#cb27-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-28"><a href="#cb27-28" aria-hidden="true" tabindex="-1"></a><span class="do">### Then Convert to dataframe to summarize ####</span></span>
+<span id="cb27-29"><a href="#cb27-29" aria-hidden="true" tabindex="-1"></a>spring_draws_df <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(<span class="fu">t</span>(spring_draws))</span>
+<span id="cb27-30"><a href="#cb27-30" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(spring_draws_df) <span class="ot">&lt;-</span> <span class="fu">levels</span>(newdata<span class="sc">$</span>Year)</span>
+<span id="cb27-31"><a href="#cb27-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-32"><a href="#cb27-32" aria-hidden="true" tabindex="-1"></a>spring_summary <span class="ot">&lt;-</span> spring_draws_df <span class="sc">%&gt;%</span></span>
+<span id="cb27-33"><a href="#cb27-33" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="fu">across</span>(<span class="fu">everything</span>(), <span class="fu">list</span>(</span>
+<span id="cb27-34"><a href="#cb27-34" aria-hidden="true" tabindex="-1"></a>    <span class="at">mean =</span> <span class="sc">~</span><span class="fu">mean</span>(., <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb27-35"><a href="#cb27-35" aria-hidden="true" tabindex="-1"></a>    <span class="at">lower =</span> <span class="sc">~</span><span class="fu">quantile</span>(., <span class="fl">0.025</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb27-36"><a href="#cb27-36" aria-hidden="true" tabindex="-1"></a>    <span class="at">upper =</span> <span class="sc">~</span><span class="fu">quantile</span>(., <span class="fl">0.975</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb27-37"><a href="#cb27-37" aria-hidden="true" tabindex="-1"></a>  )))</span>
+<span id="cb27-38"><a href="#cb27-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-39"><a href="#cb27-39" aria-hidden="true" tabindex="-1"></a>spring_summary_long <span class="ot">&lt;-</span> spring_summary <span class="sc">%&gt;%</span></span>
+<span id="cb27-40"><a href="#cb27-40" aria-hidden="true" tabindex="-1"></a>  tidyr<span class="sc">::</span><span class="fu">pivot_longer</span>(</span>
+<span id="cb27-41"><a href="#cb27-41" aria-hidden="true" tabindex="-1"></a>    <span class="fu">everything</span>(),</span>
+<span id="cb27-42"><a href="#cb27-42" aria-hidden="true" tabindex="-1"></a>    <span class="at">names_to =</span> <span class="fu">c</span>(<span class="st">"Year"</span>, <span class="st">".value"</span>),</span>
+<span id="cb27-43"><a href="#cb27-43" aria-hidden="true" tabindex="-1"></a>    <span class="at">names_sep =</span> <span class="st">"_"</span></span>
+<span id="cb27-44"><a href="#cb27-44" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb27-45"><a href="#cb27-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-46"><a href="#cb27-46" aria-hidden="true" tabindex="-1"></a>spring_summary_long</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 7 × 4
+  Year   mean lower upper
+  &lt;chr&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+1 2019   153.   149   158
+2 2020   168.   164   173
+3 2021   153.   149   157
+4 2022   161.   156   166
+5 2023   156.   150   162
+6 2024   138.   134   142
+7 2025   139.   132   146</code></pre>
+</div>
+</div>
+<p><u><em>Plot the distribution</em></u></p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>spring_draws_df <span class="sc">%&gt;%</span></span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="fu">everything</span>(), <span class="at">names_to =</span> <span class="st">"Year"</span>, <span class="at">values_to =</span> <span class="st">"spring_day"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> spring_day, <span class="at">fill =</span> Year)) <span class="sc">+</span></span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_density</span>(<span class="at">alpha =</span> <span class="fl">0.4</span>) <span class="sc">+</span></span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span>Year) <span class="sc">+</span></span>
+<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 59 rows containing non-finite outside the scale range
+(`stat_density()`).</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="BADT_Homework_files/figure-html/unnamed-chunk-12-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="results" class="level1">
+<h1>Results</h1>
+<p>Compared to the model with uniformative default priors, the model with weakly informative priors I set performed much better. Firstly the spline coefficient (sds smoothness) greatly improved. For example in year 2019, sds (sJulianDayYear2019_1) was 4.64 (2.08- 9.99). But with the prior, exponential (1) on sds, the sds (sJulianDayYear2019_1) was lowered to 3.7 (2.14- 6.12). The stronger prior helped to smoothen the curve and make it more realistic. Yet, the regression coefficient, random effect and dispersion (phi) values remained almost all identical despite setting stronger priors on these parameters as well. The ESS values also increased meaning the sampling quality got better with the priors I set. In conclusion, this model with the weakly informative prior improved the smoother and provided more stable estimates of seasonal greenness patterns in each year.</p>
+<p>In terms of answering my own scientific question about the mean greenness each year and the timing of grenness each year, both models provided very similar values. My preliminary analysis shows a strong evidence for the yearly variation in average greenness levels between 2019 to 2025. In particular, the regression coefficient indicate that the year 2020 was the year with lowest greeness level (β = -0.74 with 95 % CI = - 0.87, - 0.63) and the years 2024 and 2025 had the most greeness (β = 0.32 - 0.43) in relation to the year 2019.</p>
+<p>There is some variation in greenness (SD = 0.53) across the plots which indicates that there is spatial heterogenity within our study area. This is expected as (i) some plots are more south-facing compared to the others (ii) plots have different types of vegetation. The model has accounted for this random effect well, given the big ESS and Rhat value of 1.</p>
+<p>As to answer the question when does spring/greening actually start for each year, I decided that spring begins when the proportion of greenness goes above 0.1(this is an aribitary value and I am yet to figure out the best way to define the threshold but I am thinking to use X% of the maximum greenness or maximum slope for example). Using this value, I extracted the Julian Day for each year to decide the day of spring (results in the table with 95% Credible Interval). Spring was late in 2020 (Julian day 168), which also aligns well with the lowest greenness value and the weather information known about the study area during that year. It seems 2025 and 2024 was the year with earliest springs.</p>
+<p>While this is a preliminary investigation of the greenness data, I am continuing to explore and optimize more model structures together with finding perhaps a better estimation criteria for the timing of spring. I will eventually use LOO to rank and compare the models. The effect and timing of greenness on the breeding success will then be explored after this. But for the purpose of this project and the given time frame, I will conclude the work here.</p>
 </section>
 
 </main>

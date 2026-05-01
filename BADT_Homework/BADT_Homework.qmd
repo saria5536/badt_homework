@@ -1,20 +1,46 @@
 ---
-title: "Homework"
+title: "BADT Assignment Saria Sato"
 format: html
 editor: visual
 ---
 
-## Project Description
+## Project Background
 
-This project is one of the building blocks for a bigger project of my PhD work that looks into the effects of spring timing on the breeding success of alpine birds in central Norway. The study has data from 2019 to 2025 where we have field survey data showing some years of good breeding success and some years of failure.
+This project is one of the building blocks for a bigger project of my PhD work that looks into the effects of spring timing on the breeding success of an alpine bird, willow ptarmigan (*Lagopus lagopus*) in central Norway. As there is yearly variation in the number of chicks produced, we are interested in understanding if the yearly differences in greening /timing of spring affects this biological process. We have camera data from 2019 to 2025 where greenness is quantified by the number of green pixels in the picture. The camera image spans from mid-March to late-June (winter to spring transition) and are set up across 7 different plots within our study area.
 
-In order to effectively quantify the timing of spring first, I use camera data from the field sites (the cameras are set up across 7 different plots within the study site). We use
+For the purpose of BADT project, I focus on estimating the timing of greenness for each year. For each year, I am interested in first, estimating the mean greenness and then seeing the seasonal change in greenness for each of these years. I test three models to find which model best reflects the ecological process of greening and statistically explain my seasonal pattern well. I run a non-linear model by using a spline function and then use binomial distribution where n_green is the number of green pixels and N_pixel is trials, which is the total number of pixels.
 
-Year as a fixed effect because the purpose is to see the difference each year. This is at the central of my question later part of my project looks into how t
+NB: I did not use Year as random effect for two reasons
+
+1.  I would like to have year to year comparison and know which year was greener
+2.  I only have 7 years, which is a bit low to properly estimate stable variance
+
+[**MODELS**]{.underline}
+
+-   **Model binomial:** n_green \| trials(N_pixel) \~ Year + s(JulianDay, by = Year) + (1\|Plot),
+
+    family = binomial (link = "logit")
+
+-   **Model beta binomial with default priors:** n_green \| trials(N_pixel) \~ Year + s(JulianDay, by = Year) + (1\|Plot)
+
+    family = beta_binomial (link = "logit")
+
+-   **Model beta-binomial with weakly informative prior:** n_green \| trials(N_pixel) \~ Year + s(JulianDay, by = Year) + (1\|Plot)
+
+    family = binomial (link = "logit") with the priors:
+
+    prior(normal(0, 1), class = "b")
+
+    prior(normal(0, 2), class = "Intercept")
+
+    prior(exponential(1), class = "sd")
+
+    prior(exponential(1), class = "sds")\
+    prior(gamma(2, 0.1), class = "phi")
 
 ## Analysis
 
-Step 1: Data Manipulation
+**Step 1: Data Manipulation**
 
 ```{r}
 #| echo: false
@@ -52,26 +78,211 @@ files <- list.files(
 
 combined_data <- bind_rows(lapply(files, clean_daily_file))
 head(combined_data)
+
 ```
 
-You can add options to executable code like this
+**Step 2: Running Models**
+
+**Model Binomial**
+
+[*Run the model*]{.underline}
 
 ```{r}
+#| echo: FALSE
+#Model_1 <- brms::brm (n_green | trials(N_pixel) ~ Year + s(JulianDay, by = Year) + (1|Plot),
+                  #  data = combined_data, 
+                  #  family = binomial (link = "logit"), 
+                  #  chains = 3,
+                  # backend = "cmdstanr", 
+                  #  iter = 2000, warmup = 500, 
+                  # control = list(adapt_delta = 0.99, max_treedepth = 15),
+                  #  seed = 123)
 
-Model_3 <- brms::brm(n_green | trials(N_pixel) ~ Year + s(JulianDay, by = Year) + (1|Plot), 
-                     data = combined_data, 
-                     family = beta_binomial (link = "logit"), 
-                     chains = 3,
-                     backend = "cmdstanr", 
-                     iter = 2000, warmup = 500, 
-                     seed = 123)
-saveRDS(Model_3, "greening_M3.RDS") ## so u dont need to rerun again
-summary(Model_3) 
-#bulk and Tail TSS is sample effect size and must be higher than 1000 and Rhat should be 1 if converged well 
-fixef(Model_3) ## detailed value of estimates 
-coef(Model_3) ## group level effect
-plot(Model_3) ## should be a fuzzy caterpillar pattern for good convergence 
-pp_check(Model_3) ## check if model predicts your data accurately 
 ```
 
-The `echo: false` option disables the printing of code (only output is displayed).
+```{r}
+#| echo: FALSE
+Model_1 <- readRDS("/cloud/project/BADT_Homework/Model_binomial_fail.rds")
+summary(Model_1)
+
+```
+
+*Results and Interpretation*
+
+Clearly, the binomial model failed to converge with R-hat value \> 1. The model took 13 hours to run. Silly mistake but the lesson learned here is to check for overdispersion first and then to run the model. I switched to beta-binomial below and the model results improved. \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
+
+**Model Beta-Binomial with default priors**
+
+[*Run the model*]{.underline}
+
+```{r}
+#| echo: FALSE
+#Model_betabinomial <- brms::brm(n_green|trials(N_pixel) ~ Year + s(JulianDay, by =Year) + (1|Plot),
+                 #data = combined_data, 
+                 # family = beta_binomial (link = "logit"), 
+                 #chains = 3,
+                 # cores = 4,
+                 # backend = "cmdstanr", 
+                 # iter = 2000, warmup = 500, 
+                 # seed = 123)
+```
+
+```{r}
+#| echo: TRUE
+Model_betabinomial <- readRDS("/cloud/project/Greeness/greening_M3.RDS")
+summary(Model_betabinomial) 
+```
+
+```{r}
+#| echo: TRUE
+plot(Model_betabinomial)
+pp_check(Model_betabinomial)
+```
+
+[*Priors:*]{.underline} here I used the default priors that is plausible for each parameter
+
+```{r}
+get_prior(
+  n_green | trials(N_pixel) ~ Year + s(JulianDay, by =Year) + (1 | Plot),
+  data = combined_data,
+  family = beta_binomial())
+```
+
+[*Interpret the beta-binomial model results*]{.underline}
+
+Model Validation and Fit: This is much better result compared to the first model with just binomial distribution. The Rhat value is 1 for each effect which indicates that the model converged well. The Bulk ESS and Tail ESS, which is our effective sample size are above 1000. The phi-value of 24.81 suggests that there is substantial overdispersion, which justifies our reason to use the beta-binomial distribution.
+
+However, there are minor divergence issues in the model and more importantly the 95% CI and the standard error for the spline coefficient are also quite large. So I decided to put a weakly informative priors to set some biologically plausible values in hopes to improve the model performance. The model is presented below:
+
+\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
+
+**Model Beta-Binomial with weakly informative priors**
+
+*Run the model*
+
+```{r}
+#| echo: FALSE
+#Model_3 <- brms::brm(n_green|trials(N_pixel) ~ Year + s(JulianDay, by =Year) + (1|Plot),
+                #  data = combined_data, 
+                #  family = beta_binomial (link = "logit"), 
+                #  prior  = c(
+ # prior(normal(0, 1), class = "b"),
+ # prior(normal(0, 2), class = "Intercept"),
+ # prior(exponential(1), class = "sd"),
+ # prior(exponential(1), class = "sds"),   
+ # prior(gamma(2, 0.1), class = "phi")),
+                #  chains = 3,
+                #  cores = 4,
+                #  backend = "cmdstanr", 
+                # iter = 2000, warmup = 500, 
+                #  control = list(adapt_delta = 0.99),
+                # seed = 123)
+```
+
+```{r}
+Model_3 <- readRDS("/cloud/project/BADT_Homework/Model_betabinomial_prior.rds")
+summary(Model_3)
+plot(Model_3)
+pp_check (Model_3)
+```
+
+*Plot the seasonal trend of greening for each year*
+
+```{r}
+newdata <- expand.grid(
+  JulianDay = seq(min(combined_data$JulianDay),
+                  max(combined_data$JulianDay), by = 1),
+  Year = levels(combined_data$Year),
+  Plot = NA
+)
+newdata$N_pixel <- 10000
+pred <- fitted(Model_3, newdata = newdata, re_formula = NA)
+
+plot_data <- cbind(newdata, pred)
+plot_data_trim <- plot_data %>%
+  dplyr::filter(JulianDay <= 180)
+
+p <- ggplot(plot_data_trim, aes(x = JulianDay, y = Estimate)) +
+  geom_line(color = "darkgreen") +
+  geom_ribbon(aes(ymin = Q2.5, ymax = Q97.5), alpha = 0.2) +
+  facet_wrap(~Year) +
+  theme_minimal()
+
+print(p)
+
+```
+
+[*Extract posterior predictions to find the timing of spring*]{.underline}
+
+```{r}
+##### Extract the posterior predictions ######
+posterior <- posterior_epred(
+  Model_3,
+  newdata = newdata,
+  re_formula = NA
+)
+
+### Convert to proportions and create a function to loop through the posterior draws ##
+posterior_prop <- posterior / newdata$N_pixel
+
+spring_draws <- apply(posterior_prop, 1, function(draw_values) {
+  
+  df <- newdata
+  df$prop <- draw_values
+  
+  df %>%
+    group_by(Year) %>%
+    summarise(
+      spring_day = {
+        valid_days <- JulianDay[prop > 0.1 & !is.na(prop)]
+        if (length(valid_days) == 0) NA else min(valid_days)
+      },
+      .groups = "drop"
+    ) %>%
+    pull(spring_day)
+})
+
+### Then Convert to dataframe to summarize ####
+spring_draws_df <- as.data.frame(t(spring_draws))
+colnames(spring_draws_df) <- levels(newdata$Year)
+
+spring_summary <- spring_draws_df %>%
+  summarise(across(everything(), list(
+    mean = ~mean(., na.rm = TRUE),
+    lower = ~quantile(., 0.025, na.rm = TRUE),
+    upper = ~quantile(., 0.975, na.rm = TRUE)
+  )))
+
+spring_summary_long <- spring_summary %>%
+  tidyr::pivot_longer(
+    everything(),
+    names_to = c("Year", ".value"),
+    names_sep = "_"
+  )
+
+spring_summary_long
+
+```
+
+[*Plot the distribution*]{.underline}
+
+```{r}
+spring_draws_df %>%
+  pivot_longer(everything(), names_to = "Year", values_to = "spring_day") %>%
+  ggplot(aes(x = spring_day, fill = Year)) +
+  geom_density(alpha = 0.4) +
+  facet_wrap(~Year) +
+  theme_minimal()
+```
+
+# Results 
+
+Compared to the model with uniformative default priors, the model with weakly informative priors I set performed much better. Firstly the spline coefficient (sds smoothness) greatly improved. For example in year 2019, sds (sJulianDayYear2019_1) was 4.64 (2.08- 9.99). But with the prior, exponential (1) on sds, the sds (sJulianDayYear2019_1) was lowered to 3.7 (2.14- 6.12). The stronger prior helped to smoothen the curve and make it more realistic. Yet, the regression coefficient, random effect and dispersion (phi) values remained almost all identical despite setting stronger priors on these parameters as well. The ESS values also increased meaning the sampling quality got better with the priors I set. In conclusion, this model with the weakly informative prior improved the smoother and provided more stable estimates of seasonal greenness patterns in each year.
+
+In terms of answering my own scientific question about the mean greenness each year and the timing of grenness each year, both models provided very similar values. My preliminary analysis shows a strong evidence for the yearly variation in average greenness levels between 2019 to 2025. In particular, the regression coefficient indicate that the year 2020 was the year with lowest greeness level (β = -0.74 with 95 % CI = - 0.87, - 0.63) and the years 2024 and 2025 had the most greeness (β = 0.32 - 0.43) in relation to the year 2019.
+
+There is some variation in greenness (SD = 0.53) across the plots which indicates that there is spatial heterogenity within our study area. This is expected as (i) some plots are more south-facing compared to the others (ii) plots have different types of vegetation. The model has accounted for this random effect well, given the big ESS and Rhat value of 1.
+
+As to answer the question when does spring/greening actually start for each year, I decided that spring begins when the proportion of greenness goes above 0.1(this is an aribitary value and I am yet to figure out the best way to define the threshold but I am thinking to use X% of the maximum greenness or maximum slope for example). Using this value, I extracted the Julian Day for each year to decide the day of spring (results in the table with 95% Credible Interval). Spring was late in 2020 (Julian day 168), which also aligns well with the lowest greenness value and the weather information known about the study area during that year. It seems 2025 and 2024 was the year with earliest springs.
+
+While this is a preliminary investigation of the greenness data, I am continuing to explore and optimize more model structures together with finding perhaps a better estimation criteria for the timing of spring. I will eventually use LOO to rank and compare the models. The effect and timing of greenness on the breeding success will then be explored after this. But for the purpose of this project and the given time frame, I will conclude the work here.

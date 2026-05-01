@@ -109,14 +109,13 @@ plot_data <- cbind(newdata, pred)
 library(ggplot2)
 
 plot_data_trim <- plot_data %>%
-  dplyr::filter(JulianDay <= 166)
+  dplyr::filter(JulianDay <= 180)
 
 ggplot(plot_data_trim, aes(x = JulianDay, y = Estimate)) +
   geom_line(color = "blue") +
   geom_ribbon(aes(ymin = Q2.5, ymax = Q97.5), alpha = 0.2) +
   facet_wrap(~Year) +
   theme_minimal()
-
 
 
 library(dplyr)
@@ -134,7 +133,7 @@ greenup <- plot_data %>%
 
 ############################################
 plot_data_trim <- plot_data %>%
-  dplyr::filter(JulianDay <= 180)
+  dplyr::filter(JulianDay <= 200)
 
 plot_data_slope <- plot_data_trim %>%
   dplyr::group_by(Year) %>%
